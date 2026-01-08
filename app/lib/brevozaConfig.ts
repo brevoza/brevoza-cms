@@ -105,3 +105,95 @@ export async function fetchCollectionConfig(collectionName: string): Promise<Bre
 
   return fetchFileAtPath(entry.config);
 }
+
+export type RepoDirEntry = {
+  name: string;
+  path: string;
+  type: "file" | "dir";
+  download_url?: string | null;
+};
+
+export type ItemFile = {
+  name: string;
+  path: string;
+  content?: string;
+  url?: string;
+  error?: string;
+};
+
+export function findItemsDirFromCollectionConfig(content?: string): string | undefined {
+  if (!content) return undefined;
+  // Look for common keys: items_dir, folder, path, dir
+  const match = content.match(/(?:items_dir|items-directory|folder|path|dir)\s*:\s*(?:"|')?([^"'\s]+)(?:"|')?/i);
+  return match ? match[1] : undefined;
+}
+
+export async function fetchRepoDirectory(path: string): Promise<{ entries?: RepoDirEntry[]; error?: string; url?: string }> {
+  const owner = process.env.REPO_OWNER;
+  const repo = process.env.REPO_NAME;
+  const branch = process.env.REPO_BRANCH ?? "main";
+
+  if (!owner || !repo) return { error: "Missing REPO_OWNER or REPO_NAME environment variables." };
+
+  const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${encodeURIComponent(path)}?ref=${encodeURIComponent(branch)}`;
+
+  try {
+    const res = await fetch(apiUrl, { cache: "no-store" });
+    if (res.status === 404) return { error: `Directory not found`, url: apiUrl };
+    if (!res.ok) return { error: `Failed to list directory: ${res.status} ${res.statusText}`, url: apiUrl };
+    const json = await res.json();
+    if (!Array.isArray(json)) return { error: `Not a directory`, url: apiUrl };
+    const entries: RepoDirEntry[] = json.map((e: any) => ({ name: e.name, path: e.path, type: e.type, download_url: e.download_url }));
+    return { entries, url: apiUrl };
+  } catch (err) {
+    return { error: String(err), url: apiUrl };
+  }
+}
+
+export async function fetchAllItemsForCollection(collectionName: string, collectionConfigContent?: string): Promise<{ items?: ItemFile[]; error?: string }> {
+  const owner = process.env.REPO_OWNER;
+  const repo = process.env.REPO_NAME;
+  const branch = process.env.REPO_BRANCH ?? "main";
+
+  if (!owner || !repo) return { error: "Missing REPO_OWNER or REPO_NAME environment variables." };
+
+  // Try to discover directory from collection config
+  const candidates: string[] = [];
+  const fromConfig = findItemsDirFromCollectionConfig(collectionConfigContent);
+  if (fromConfig) candidates.push(fromConfig);
+
+  // common locations
+  candidates.push(
+    `collections/${collectionName}`,
+    `${collectionName}`,
+    `content/${collectionName}`,
+    `data/${collectionName}`,
+    `_collections/${collectionName}`
+  );
+
+  for (const candidate of candidates) {
+    const listing = await fetchRepoDirectory(candidate);
+    if (listing.entries && listing.entries.length > 0) {
+      // fetch each file's content (only files)
+      const files = listing.entries.filter((e) => e.type === "file");
+      const items: ItemFile[] = await Promise.all(
+        files.map(async (f) => {
+          const downloadUrl = f.download_url ?? `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${encodeURIComponent(f.path)}`;
+          try {
+            const res = await fetch(downloadUrl, { cache: "no-store" });
+            if (!res.ok) return { name: f.name, path: f.path, error: `Failed to fetch file: ${res.status} ${res.statusText}`, url: downloadUrl };
+            const text = await res.text();
+            return { name: f.name, path: f.path, content: text, url: downloadUrl };
+          } catch (err) {
+            return { name: f.name, path: f.path, error: String(err), url: downloadUrl };
+          }
+        })
+      );
+
+      return { items };
+    }
+    // otherwise keep trying
+  }
+
+  return { error: `No items directory found for collection '${collectionName}'` };
+}
