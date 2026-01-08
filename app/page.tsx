@@ -1,8 +1,18 @@
 import Image from "next/image";
-import { fetchBrevozaConfig } from "./lib/brevozaConfig";
+import { fetchBrevozaConfig, parseCollectionsFromConfig, fetchFileAtPath } from "./lib/brevozaConfig";
 
 export default async function Home() {
   const { content, error, url } = await fetchBrevozaConfig();
+
+  // Find collections and fetch their config files (if any)
+  const collections = parseCollectionsFromConfig(content ?? "");
+  const collectionsResults = await Promise.all(
+    collections.map(async (c) => {
+      if (!c.config) return { name: c.name, error: "No config file specified for this collection." };
+      const res = await fetchFileAtPath(c.config);
+      return { name: c.name, configFile: c.config, ...res };
+    })
+  );
 
   return (
     <div className="flex min-h-screen items-start justify-center bg-zinc-50 font-sans dark:bg-black py-12">
@@ -57,6 +67,33 @@ export default async function Home() {
 
           <p className="mt-4 text-xs text-zinc-500">Make sure <code>REPO_OWNER</code> and <code>REPO_NAME</code> are set in your environment (for local dev, add them to <code>.env</code>).</p>
         </section>
+
+        {collectionsResults.length > 0 ? (
+          <section className="mt-6">
+            <h2 className="mb-3 text-lg font-medium">Collections</h2>
+            <div className="flex flex-col gap-6">
+              {collectionsResults.map((col) => (
+                <div key={col.name} className="rounded-md border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-900">
+                  <h3 className="text-md font-medium">{col.name}</h3>
+                  <div className="mt-2">
+                    {col.error ? (
+                      <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+                        <strong>Error:</strong> {col.error}
+                        { (col as any).url ? (
+                          <div className="mt-2 text-xs text-zinc-600">Tried URL: <a className="underline" href={(col as any).url} target="_blank" rel="noreferrer">{(col as any).url}</a></div>
+                        ) : null}
+                      </div>
+                    ) : (
+                      <pre className="mt-2 max-h-[40vh] overflow-auto rounded-md border border-zinc-200 bg-zinc-100 p-3 text-sm leading-6 text-zinc-900 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-50">
+                        {(col as any).content}
+                      </pre>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        ) : null}
       </main>
     </div>
   );
