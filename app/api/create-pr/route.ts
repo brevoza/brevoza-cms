@@ -1,13 +1,29 @@
 import { NextResponse } from 'next/server';
 import { App } from 'octokit';
 
-export async function POST() {
+export async function POST(request: Request) {
   try {
+    const body = await request.json();
+    
+    // Required parameters
+    const { filePath, content, title, prBody, commitMessage } = body;
+    
+    if (!filePath || !content || !title || !prBody || !commitMessage) {
+      return NextResponse.json(
+        { error: 'Missing required parameters: filePath, content, title, prBody, commitMessage' },
+        { status: 400 }
+      );
+    }
+
+    // Optional parameter with fallback
+    const timestamp = Date.now();
+    const branchName = body.branchName || `proposal-${timestamp}`;
+
     const appId = process.env.GITHUB_APP_ID;
     const privateKey = process.env.GITHUB_PRIVATE_KEY;
     const owner = process.env.REPO_OWNER;
     const repo = process.env.REPO_NAME;
-    const branch = process.env.REPO_BRANCH || 'main';
+    const baseBranch = process.env.REPO_BRANCH || 'main';
 
     if (!appId || !privateKey || !owner || !repo) {
       return NextResponse.json(
@@ -47,15 +63,11 @@ export async function POST() {
     const installationId = installation.id;
     const octokit = await app.getInstallationOctokit(installationId);
 
-    // Create a unique branch name
-    const timestamp = Date.now();
-    const newBranch = `proposal-${timestamp}`;
-
     // Get the base branch SHA
     const { data: refData } = await octokit.rest.git.getRef({
       owner,
       repo,
-      ref: `heads/${branch}`,
+      ref: `heads/${baseBranch}`,
     });
     const baseSha = refData.object.sha;
 
@@ -63,42 +75,42 @@ export async function POST() {
     await octokit.rest.git.createRef({
       owner,
       repo,
-      ref: `refs/heads/${newBranch}`,
+      ref: `refs/heads/${branchName}`,
       sha: baseSha,
     });
 
-    // Get current README content
-    const { data: readmeData } = await octokit.rest.repos.getContent({
+    // Get current file content
+    const { data: fileData } = await octokit.rest.repos.getContent({
       owner,
       repo,
-      path: 'README.md',
-      ref: newBranch,
+      path: filePath,
+      ref: branchName,
     });
 
-    if ('content' in readmeData) {
+    if ('content' in fileData) {
       // Decode the content
-      const currentContent = Buffer.from(readmeData.content, 'base64').toString('utf-8');
-      const newContent = currentContent + '\nPR opened by beroza';
+      const currentContent = Buffer.from(fileData.content, 'base64').toString('utf-8');
+      const newContent = currentContent + content;
 
-      // Update the README
+      // Update the file
       await octokit.rest.repos.createOrUpdateFileContents({
         owner,
         repo,
-        path: 'README.md',
-        message: 'Update README - PR opened by beroza',
+        path: filePath,
+        message: commitMessage,
         content: Buffer.from(newContent).toString('base64'),
-        sha: readmeData.sha,
-        branch: newBranch,
+        sha: fileData.sha,
+        branch: branchName,
       });
 
       // Create pull request
       const { data: pr } = await octokit.rest.pulls.create({
         owner,
         repo,
-        title: 'Proposal: Update README',
-        head: newBranch,
-        base: branch,
-        body: 'This PR was automatically created from the proposals page.\n\nAdds "PR opened by beroza" to the README.',
+        title: title,
+        head: branchName,
+        base: baseBranch,
+        body: prBody,
       });
 
       return NextResponse.json({
@@ -108,7 +120,7 @@ export async function POST() {
       });
     } else {
       return NextResponse.json(
-        { error: 'README.md not found or is a directory' },
+        { error: `File '${filePath}' not found or is a directory` },
         { status: 500 }
       );
     }

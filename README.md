@@ -21,6 +21,8 @@ it reads REPO_OWNER, REPO_NAME, and optional REPO_BRANCH from .env and finds tha
 
 
 
+you must install the github app brevoza-cms (https://github.com/apps/brevoza-cms) to your account and allow it access to your repo you want connected.
+
 
 
 

@@ -13,6 +13,17 @@ export default function ProposalsPage() {
     try {
       const response = await fetch('/api/create-pr', {
         method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          filePath: 'testing/testfile.txt',
+          content: '\nPR opened by beroza',
+          title: 'Proposal: edit testing file',
+          prBody: 'This PR was automatically created by brevoza.',
+          commitMessage: 'Update testfile - PR opened by beroza',
+          // branchName: 'custom-branch-name', // Optional - defaults to proposal-{timestamp}
+        }),
       });
       
       const data = await response.json();
