@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { App } from 'octokit';
+import { getOctokitForOwner } from '../../lib/github';
 
 export async function POST(request: Request) {
   try {
@@ -20,46 +20,12 @@ export async function POST(request: Request) {
     const branchName = body.branchName || `add-${collectionName}-item-${timestamp}`;
     const baseBranch = body.baseBranch || 'main';
 
-    const appId = process.env.GITHUB_APP_ID;
-    const privateKey = process.env.GITHUB_PRIVATE_KEY;
-
-    if (!appId || !privateKey) {
-      return NextResponse.json(
-        { error: 'Missing required environment variables' },
-        { status: 500 }
-      );
+    const result = await getOctokitForOwner(owner);
+    if ('error' in result) {
+      return NextResponse.json({ error: result.error }, { status: result.status });
     }
 
-    // Initialize GitHub App
-    const app = new App({
-      appId,
-      privateKey,
-    });
-
-    // Get the installation for this repository
-    const { data: installations } = await app.octokit.request('GET /app/installations');
-    
-    if (installations.length === 0) {
-      return NextResponse.json(
-        { error: 'No installations found for this GitHub App' },
-        { status: 500 }
-      );
-    }
-
-    // Find the installation for the specific owner
-    const installation = installations.find(
-      (inst) => inst.account?.login.toLowerCase() === owner.toLowerCase()
-    );
-
-    if (!installation) {
-      return NextResponse.json(
-        { error: `GitHub App is not installed on account: ${owner}` },
-        { status: 500 }
-      );
-    }
-
-    const installationId = installation.id;
-    const octokit = await app.getInstallationOctokit(installationId);
+    const { octokit } = result;
 
     // Get the base branch SHA
     const { data: refData } = await octokit.rest.git.getRef({
