@@ -126,6 +126,8 @@ export default async function RepoPage({ params }: { params: Promise<{ owner: st
                       <NewItemForm 
                         collectionConfig={(col as any).content} 
                         collectionName={col.name}
+                        owner={owner}
+                        repo={repo}
                       />
                     )}
                   </div>

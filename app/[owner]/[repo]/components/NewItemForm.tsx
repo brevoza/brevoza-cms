@@ -21,17 +21,26 @@ type CollectionSchema = {
 
 export default function NewItemForm({ 
   collectionConfig, 
-  collectionName 
+  collectionName,
+  owner,
+  repo
 }: { 
   collectionConfig: string; 
   collectionName: string;
+  owner: string;
+  repo: string;
 }) {
   const [formData, setFormData] = useState<Record<string, string>>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [prUrl, setPrUrl] = useState<string | null>(null);
+  const [prNumber, setPrNumber] = useState<number | null>(null);
   
   // Parse the collection config YAML to extract schema
   const parsedConfig = parseCollectionConfig(collectionConfig);
   const properties = parsedConfig.schema?.properties || {};
   const storagePath = parsedConfig.storage?.path || `${collectionName}/`;
+  const format = parsedConfig.storage?.format || 'json';
   const idField = parsedConfig.storage?.idField || 'id';
 
   const handleInputChange = (fieldName: string, value: string) => {
@@ -41,18 +50,82 @@ export default function NewItemForm({
     }));
   };
 
-  const handleCreateProposal = () => {
-    // Determine the file path based on the idField
-    const itemId = formData[idField] || 'new-item';
-    const itemPath = `${storagePath}${itemId}`;
+  const handleCreateProposal = async () => {
+    setError(null);
+    setPrUrl(null);
+    setPrNumber(null);
+    setIsSubmitting(true);
     
-    console.log('Form Data (JSON):', JSON.stringify(formData, null, 2));
-    console.log('Target Path:', itemPath);
+    try {
+      // Determine the file path based on the idField
+      const itemId = formData[idField] || 'new-item';
+      const fileExtension = format === 'json' ? '.json' : '.yml';
+      const itemPath = `${storagePath}${itemId}${fileExtension}`;
+      
+      console.log('Form Data (JSON):', JSON.stringify(formData, null, 2));
+      console.log('Target Path:', itemPath);
+
+      // Call the API to create the PR
+      const response = await fetch('/api/create-item-pr', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          owner,
+          repo,
+          collectionName,
+          itemData: formData,
+          itemPath,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to create proposal');
+      }
+
+      setPrUrl(data.url);
+      setPrNumber(data.number);
+      
+      // Clear the form
+      setFormData({});
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An error occurred');
+      console.error('Error creating proposal:', err);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
     <div className="mt-6 rounded-md border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
       <h4 className="text-md font-medium mb-4">Create New Item</h4>
+      
+      {error && (
+        <div className="mb-4 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+          <strong>Error:</strong> {error}
+        </div>
+      )}
+      
+      {prUrl && prNumber && (
+        <div className="mb-4 rounded-md border border-green-200 bg-green-50 p-3 text-sm text-green-800">
+          <div className="flex items-center justify-between">
+            <div>
+              <strong>Success!</strong> Pull request #{prNumber} created. It will take a minute to see your change reflected above.
+            </div>
+            <a
+              href={prUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="rounded-full border border-solid border-green-600 bg-green-600 px-3 py-1 text-xs text-white hover:bg-green-700"
+            >
+              Open PR on GitHub
+            </a>
+          </div>
+        </div>
+      )}
       
       <div className="flex flex-col gap-4">
         {Object.entries(properties).map(([fieldName, fieldSchema]) => (
@@ -111,9 +184,10 @@ export default function NewItemForm({
         
         <button
           onClick={handleCreateProposal}
-          className="mt-4 rounded-full border border-solid border-black/[.08] bg-black px-4 py-2 text-sm text-white hover:bg-zinc-800 dark:bg-white dark:text-black dark:hover:bg-zinc-200"
+          disabled={isSubmitting}
+          className="mt-4 rounded-full border border-solid border-black/[.08] bg-black px-4 py-2 text-sm text-white hover:bg-zinc-800 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-white dark:text-black dark:hover:bg-zinc-200"
         >
-          Create Proposal
+          {isSubmitting ? 'Creating Proposal...' : 'Create Proposal'}
         </button>
       </div>
     </div>
