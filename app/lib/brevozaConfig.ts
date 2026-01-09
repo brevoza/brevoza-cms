@@ -9,13 +9,9 @@ export type CollectionEntry = {
   config?: string;
 };
 
-export async function fetchBrevozaConfig(): Promise<BrevozaConfigResult> {
-  const owner = process.env.REPO_OWNER;
-  const repo = process.env.REPO_NAME;
-  const branch = process.env.REPO_BRANCH ?? "main";
-
+export async function fetchBrevozaConfig(owner: string, repo: string, branch: string = "main"): Promise<BrevozaConfigResult> {
   if (!owner || !repo) {
-    return { error: "Missing REPO_OWNER or REPO_NAME environment variables." };
+    return { error: "Missing owner or repo parameters." };
   }
 
   const url = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/brevoza.config.yml`;
@@ -72,13 +68,9 @@ export function parseCollectionsFromConfig(content: string): CollectionEntry[] {
   return entries;
 }
 
-export async function fetchFileAtPath(path: string): Promise<BrevozaConfigResult> {
-  const owner = process.env.REPO_OWNER;
-  const repo = process.env.REPO_NAME;
-  const branch = process.env.REPO_BRANCH ?? "main";
-
+export async function fetchFileAtPath(owner: string, repo: string, branch: string, path: string): Promise<BrevozaConfigResult> {
   if (!owner || !repo) {
-    return { error: "Missing REPO_OWNER or REPO_NAME environment variables." };
+    return { error: "Missing owner or repo parameters." };
   }
 
   const url = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${path}`;
@@ -95,15 +87,15 @@ export async function fetchFileAtPath(path: string): Promise<BrevozaConfigResult
   }
 }
 
-export async function fetchCollectionConfig(collectionName: string): Promise<BrevozaConfigResult> {
-  const brevoza = await fetchBrevozaConfig();
+export async function fetchCollectionConfig(owner: string, repo: string, branch: string, collectionName: string): Promise<BrevozaConfigResult> {
+  const brevoza = await fetchBrevozaConfig(owner, repo, branch);
   if (brevoza.error) return { error: brevoza.error };
   const collections = parseCollectionsFromConfig(brevoza.content ?? "");
   const entry = collections.find((c) => c.name === collectionName);
   if (!entry) return { error: `Collection '${collectionName}' not found in brevoza.config.yml` };
   if (!entry.config) return { error: `Collection '${collectionName}' has no 'config' file configured.` };
 
-  return fetchFileAtPath(entry.config);
+  return fetchFileAtPath(owner, repo, branch, entry.config);
 }
 
 export type RepoDirEntry = {
@@ -128,12 +120,8 @@ export function findItemsDirFromCollectionConfig(content?: string): string | und
   return match ? match[1] : undefined;
 }
 
-export async function fetchRepoDirectory(path: string): Promise<{ entries?: RepoDirEntry[]; error?: string; url?: string }> {
-  const owner = process.env.REPO_OWNER;
-  const repo = process.env.REPO_NAME;
-  const branch = process.env.REPO_BRANCH ?? "main";
-
-  if (!owner || !repo) return { error: "Missing REPO_OWNER or REPO_NAME environment variables." };
+export async function fetchRepoDirectory(owner: string, repo: string, branch: string, path: string): Promise<{ entries?: RepoDirEntry[]; error?: string; url?: string }> {
+  if (!owner || !repo) return { error: "Missing owner or repo parameters." };
 
   const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${encodeURIComponent(path)}?ref=${encodeURIComponent(branch)}`;
 
@@ -150,12 +138,8 @@ export async function fetchRepoDirectory(path: string): Promise<{ entries?: Repo
   }
 }
 
-export async function fetchAllItemsForCollection(collectionName: string, collectionConfigContent?: string): Promise<{ items?: ItemFile[]; error?: string }> {
-  const owner = process.env.REPO_OWNER;
-  const repo = process.env.REPO_NAME;
-  const branch = process.env.REPO_BRANCH ?? "main";
-
-  if (!owner || !repo) return { error: "Missing REPO_OWNER or REPO_NAME environment variables." };
+export async function fetchAllItemsForCollection(owner: string, repo: string, branch: string, collectionName: string, collectionConfigContent?: string): Promise<{ items?: ItemFile[]; error?: string }> {
+  if (!owner || !repo) return { error: "Missing owner or repo parameters." };
 
   // Try to discover directory from collection config
   const candidates: string[] = [];
@@ -172,7 +156,7 @@ export async function fetchAllItemsForCollection(collectionName: string, collect
   );
 
   for (const candidate of candidates) {
-    const listing = await fetchRepoDirectory(candidate);
+    const listing = await fetchRepoDirectory(owner, repo, branch, candidate);
     if (listing.entries && listing.entries.length > 0) {
       // fetch each file's content (only files)
       const files = listing.entries.filter((e) => e.type === "file");

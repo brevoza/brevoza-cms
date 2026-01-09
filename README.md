@@ -2,7 +2,11 @@
 ---
 A Next JS web app that will read the brevoza.config.yml file of a GitHub repo and display an editor specific to that schema to create/edit/delete items in a collection.  
 
+you must install the github app brevoza-cms (https://github.com/apps/brevoza-cms) to your account and allow it access to your repo you want connected.
 
+
+if i want the github project https://github.com/brevoza/jonny-jackson-projects edited, i need to go to 
+https://brevoza-cms.vercel.app/brevoza/jonny-jackson-projects
 
 
 ```
@@ -10,18 +14,8 @@ cd brevoza-cms
 npm run dev
 ```
 
-.env file:
-```
-REPO_OWNER=brevoza
-REPO_NAME=jonny-jackson-projects
-REPO_BRANCH=main
-```
-
-it reads REPO_OWNER, REPO_NAME, and optional REPO_BRANCH from .env and finds that github repo's brevoza.config.yml.
 
 
-
-you must install the github app brevoza-cms (https://github.com/apps/brevoza-cms) to your account and allow it access to your repo you want connected.
 
 
 

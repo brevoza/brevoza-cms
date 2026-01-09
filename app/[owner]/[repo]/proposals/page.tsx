@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { use, useState } from 'react';
 
-export default function ProposalsPage() {
+export default function ProposalsPage({ params }: { params: Promise<{ owner: string; repo: string }> }) {
+  const { owner, repo } = use(params);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
 
@@ -17,11 +18,14 @@ export default function ProposalsPage() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          filePath: 'testing/testfile.txt',
+          owner: owner,
+          repo: repo,
+          filePath: 'README.md',
           content: '\nPR opened by beroza',
           title: 'Proposal: edit testing file',
           prBody: 'This PR was automatically created by brevoza.',
           commitMessage: 'Update testfile - PR opened by beroza',
+          baseBranch: 'main',
           // branchName: 'custom-branch-name', // Optional - defaults to proposal-{timestamp}
         }),
       });
@@ -45,6 +49,9 @@ export default function ProposalsPage() {
       <div className="max-w-md w-full space-y-8">
         <div>
           <h1 className="text-4xl font-bold text-center mb-2">Proposals</h1>
+          <p className="text-center text-gray-600">
+            Repository: {owner}/{repo}
+          </p>
           <p className="text-center text-gray-600">
             Click the button below to create a pull request
           </p>

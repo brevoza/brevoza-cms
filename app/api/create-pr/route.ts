@@ -6,11 +6,11 @@ export async function POST(request: Request) {
     const body = await request.json();
     
     // Required parameters
-    const { filePath, content, title, prBody, commitMessage } = body;
+    const { owner, repo, filePath, content, title, prBody, commitMessage } = body;
     
-    if (!filePath || !content || !title || !prBody || !commitMessage) {
+    if (!owner || !repo || !filePath || !content || !title || !prBody || !commitMessage) {
       return NextResponse.json(
-        { error: 'Missing required parameters: filePath, content, title, prBody, commitMessage' },
+        { error: 'Missing required parameters: owner, repo, filePath, content, title, prBody, commitMessage' },
         { status: 400 }
       );
     }
@@ -18,14 +18,12 @@ export async function POST(request: Request) {
     // Optional parameter with fallback
     const timestamp = Date.now();
     const branchName = body.branchName || `proposal-${timestamp}`;
+    const baseBranch = body.baseBranch || 'main';
 
     const appId = process.env.GITHUB_APP_ID;
     const privateKey = process.env.GITHUB_PRIVATE_KEY;
-    const owner = process.env.REPO_OWNER;
-    const repo = process.env.REPO_NAME;
-    const baseBranch = process.env.REPO_BRANCH || 'main';
 
-    if (!appId || !privateKey || !owner || !repo) {
+    if (!appId || !privateKey) {
       return NextResponse.json(
         { error: 'Missing required environment variables' },
         { status: 500 }
