@@ -1,6 +1,7 @@
 import Image from "next/image";
 import type { Metadata } from "next";
 import { fetchBrevozaConfig, parseCollectionsFromConfig, fetchFileAtPath } from "../../lib/brevozaConfig";
+import NewItemForm from "./components/NewItemForm";
 
 export async function generateMetadata({ params }: { params: Promise<{ owner: string; repo: string }> }): Promise<Metadata> {
   const { owner, repo } = await params;
@@ -119,6 +120,14 @@ export default async function RepoPage({ params }: { params: Promise<{ owner: st
                         <div className="text-xs text-zinc-500 mt-2">No items found for this collection.</div>
                       )}
                     </div>
+
+                    {/* NewItemForm component */}
+                    {(col as any).content && (
+                      <NewItemForm 
+                        collectionConfig={(col as any).content} 
+                        collectionName={col.name}
+                      />
+                    )}
                   </div>
                 </div>
               ))}
