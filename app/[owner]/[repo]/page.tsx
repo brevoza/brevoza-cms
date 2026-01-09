@@ -22,14 +22,6 @@ export default async function RepoPage({ params }: { params: Promise<{ owner: st
     <div className="flex min-h-screen items-start justify-center bg-zinc-50 font-sans dark:bg-black py-12">
       <main className="w-full max-w-4xl rounded-md bg-white p-8 shadow-sm dark:bg-black">
         <header className="flex items-center gap-6">
-          <Image
-            className="dark:invert"
-            src="/next.svg"
-            alt="Next.js logo"
-            width={84}
-            height={18}
-            priority
-          />
           <div>
             <h1 className="text-2xl font-semibold text-black dark:text-zinc-50">Brevoza CMS</h1>
             <p className="text-sm text-zinc-600 dark:text-zinc-400">Displays the repository's <code>brevoza.config.yml</code></p>
