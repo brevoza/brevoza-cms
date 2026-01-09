@@ -1,11 +1,15 @@
 'use client';
 
-import { use, useState } from 'react';
+import { use, useState, useEffect } from 'react';
 
 export default function ProposalsPage({ params }: { params: Promise<{ owner: string; repo: string }> }) {
   const { owner, repo } = use(params);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
+
+  useEffect(() => {
+    document.title = `Proposals - ${owner}/${repo} | Brevoza CMS`;
+  }, [owner, repo]);
 
   const handleCreatePR = async () => {
     setLoading(true);

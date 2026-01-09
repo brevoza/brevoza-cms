@@ -1,3 +1,10 @@
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Home | Brevoza CMS",
+  description: "Welcome to Brevoza - Content Management System for GitHub repositories",
+};
+
 export default function Home() {
   return (
     <div>

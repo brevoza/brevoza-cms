@@ -1,5 +1,14 @@
 import Image from "next/image";
+import type { Metadata } from "next";
 import { fetchBrevozaConfig, parseCollectionsFromConfig, fetchFileAtPath } from "../../lib/brevozaConfig";
+
+export async function generateMetadata({ params }: { params: Promise<{ owner: string; repo: string }> }): Promise<Metadata> {
+  const { owner, repo } = await params;
+  return {
+    title: `${owner}/${repo} | Brevoza CMS`,
+    description: `View and manage content for ${owner}/${repo} repository`,
+  };
+}
 
 export default async function RepoPage({ params }: { params: Promise<{ owner: string; repo: string }> }) {
   const { owner, repo } = await params;
