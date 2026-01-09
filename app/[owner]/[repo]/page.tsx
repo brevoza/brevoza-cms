@@ -31,11 +31,17 @@ export default async function RepoPage({ params }: { params: Promise<{ owner: st
   return (
     <div className="flex min-h-screen items-start justify-center bg-zinc-50 font-sans dark:bg-black py-12">
       <main className="w-full max-w-4xl rounded-md bg-white p-8 shadow-sm dark:bg-black">
-        <header className="flex items-center gap-6">
+        <header className="flex items-center justify-between gap-6">
           <div>
             <h1 className="text-2xl font-semibold text-black dark:text-zinc-50">Brevoza CMS</h1>
             <p className="text-sm text-zinc-600 dark:text-zinc-400">Displays the repository's <code>brevoza.config.yml</code></p>
           </div>
+          <a
+            href={`/${owner}/${repo}/proposals`}
+            className="rounded-full border border-solid border-black/[.08] px-4 py-2 text-sm hover:bg-black/[.04] dark:border-white/[.145]"
+          >
+            View Proposals
+          </a>
         </header>
 
         <section className="mt-8">

@@ -113,7 +113,7 @@ export default function NewItemForm({
         <div className="mb-4 rounded-md border border-green-200 bg-green-50 p-3 text-sm text-green-800">
           <div className="flex items-center justify-between">
             <div>
-              <strong>Success!</strong> Pull request #{prNumber} created. It will take a minute to see your change reflected above.
+              <strong>Success!</strong> Pull request #{prNumber} created. An admin will need to approve your proposal before you see the change reflected above.
             </div>
             <a
               href={prUrl}

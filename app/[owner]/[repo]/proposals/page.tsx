@@ -1,86 +1,39 @@
-'use client';
+import type { Metadata } from "next";
+import ProposalsList from "./ProposalsList";
 
-import { use, useState, useEffect } from 'react';
-
-export default function ProposalsPage({ params }: { params: Promise<{ owner: string; repo: string }> }) {
-  const { owner, repo } = use(params);
-  const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState('');
-
-  useEffect(() => {
-    document.title = `Proposals - ${owner}/${repo} | Brevoza CMS`;
-  }, [owner, repo]);
-
-  const handleCreatePR = async () => {
-    setLoading(true);
-    setMessage('');
-    
-    try {
-      const response = await fetch('/api/create-pr', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          owner: owner,
-          repo: repo,
-          filePath: 'README.md',
-          content: '\nPR opened by beroza',
-          title: 'Proposal: edit testing file',
-          prBody: 'This PR was automatically created by brevoza.',
-          commitMessage: 'Update testfile - PR opened by beroza',
-          baseBranch: 'main',
-          // branchName: 'custom-branch-name', // Optional - defaults to proposal-{timestamp}
-        }),
-      });
-      
-      const data = await response.json();
-      
-      if (response.ok) {
-        setMessage(`Success! PR created: ${data.url}`);
-      } else {
-        setMessage(`Error: ${data.error}`);
-      }
-    } catch (error) {
-      setMessage(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    } finally {
-      setLoading(false);
-    }
+export async function generateMetadata({ params }: { params: Promise<{ owner: string; repo: string }> }): Promise<Metadata> {
+  const { owner, repo } = await params;
+  return {
+    title: `Proposals - ${owner}/${repo} | Brevoza CMS`,
+    description: `View and manage proposals for ${owner}/${repo} repository`,
   };
+}
+
+export default async function ProposalsPage({ params }: { params: Promise<{ owner: string; repo: string }> }) {
+  const { owner, repo } = await params;
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-8">
-      <div className="max-w-md w-full space-y-8">
-        <div>
-          <h1 className="text-4xl font-bold text-center mb-2">Proposals</h1>
-          <p className="text-center text-gray-600">
-            Repository: {owner}/{repo}
-          </p>
-          <p className="text-center text-gray-600">
-            Click the button below to create a pull request
-          </p>
-        </div>
-        
-        <div className="space-y-4">
-          <button
-            onClick={handleCreatePR}
-            disabled={loading}
-            className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white font-semibold py-3 px-6 rounded-lg transition-colors duration-200"
+    <div className="flex min-h-screen items-start justify-center bg-zinc-50 font-sans dark:bg-black py-12">
+      <main className="w-full max-w-4xl rounded-md bg-white p-8 shadow-sm dark:bg-black">
+        <header className="flex items-center justify-between mb-8">
+          <div>
+            <h1 className="text-2xl font-semibold text-black dark:text-zinc-50">Proposals</h1>
+            <p className="text-sm text-zinc-600 dark:text-zinc-400">
+              <a href={`/${owner}/${repo}`} className="underline hover:text-zinc-900 dark:hover:text-zinc-200">
+                {owner}/{repo}
+              </a>
+            </p>
+          </div>
+          <a
+            href={`/${owner}/${repo}`}
+            className="rounded-full border border-solid border-black/[.08] px-4 py-2 text-sm hover:bg-black/[.04] dark:border-white/[.145]"
           >
-            {loading ? 'Creating PR...' : 'Create Pull Request'}
-          </button>
-          
-          {message && (
-            <div className={`p-4 rounded-lg ${
-              message.startsWith('Success') 
-                ? 'bg-green-100 text-green-800' 
-                : 'bg-red-100 text-red-800'
-            }`}>
-              {message}
-            </div>
-          )}
-        </div>
-      </div>
+            Back to Repository
+          </a>
+        </header>
+
+        <ProposalsList owner={owner} repo={repo} />
+      </main>
     </div>
   );
 }
