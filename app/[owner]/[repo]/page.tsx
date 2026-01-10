@@ -59,6 +59,12 @@ export default async function RepoPage({ params }: { params: Promise<{ owner: st
             >
               View Proposals
             </a>
+            <a
+              href={`/${owner}/${repo}/api-docs`}
+              className="rounded-full border border-solid border-black/[.08] px-4 py-2 text-sm hover:bg-black/[.04] dark:border-white/[.145]"
+            >
+              API Docs
+            </a>
           </div>
         </header>
 
