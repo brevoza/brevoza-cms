@@ -12,6 +12,7 @@
     "next": "16.1.1",
     "octokit": "^5.0.5",
     "react": "19.2.3",
+    "react-diff-view": "^3.3.2",
     "react-dom": "19.2.3"
   },
   "devDependencies": {
