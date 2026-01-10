@@ -76,7 +76,7 @@ export async function fetchFileAtPath(owner: string, repo: string, branch: strin
   const url = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${path}`;
 
   try {
-    const res = await fetch(url, { cache: "no-store" });
+    const res = await fetch(url, { next: { revalidate: 60 } });
     if (!res.ok) {
       return { error: `Failed to fetch file: ${res.status} ${res.statusText}`, url };
     }
@@ -126,7 +126,7 @@ export async function fetchRepoDirectory(owner: string, repo: string, branch: st
   const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${encodeURIComponent(path)}?ref=${encodeURIComponent(branch)}`;
 
   try {
-    const res = await fetch(apiUrl, { cache: "no-store" });
+    const res = await fetch(apiUrl, { next: { revalidate: 60 } });
     if (res.status === 404) return { error: `Directory not found`, url: apiUrl };
     if (!res.ok) return { error: `Failed to list directory: ${res.status} ${res.statusText}`, url: apiUrl };
     const json = await res.json();
@@ -138,8 +138,17 @@ export async function fetchRepoDirectory(owner: string, repo: string, branch: st
   }
 }
 
-export async function fetchAllItemsForCollection(owner: string, repo: string, branch: string, collectionName: string, collectionConfigContent?: string): Promise<{ items?: ItemFile[]; error?: string }> {
+export async function fetchAllItemsForCollection(
+  owner: string,
+  repo: string,
+  branch: string,
+  collectionName: string,
+  collectionConfigContent?: string,
+  options: { metadataOnly?: boolean; limit?: number } = {}
+): Promise<{ items?: ItemFile[]; error?: string; totalCount?: number }> {
   if (!owner || !repo) return { error: "Missing owner or repo parameters." };
+
+  const { metadataOnly = false, limit } = options;
 
   // Try to discover directory from collection config
   const candidates: string[] = [];
@@ -159,12 +168,26 @@ export async function fetchAllItemsForCollection(owner: string, repo: string, br
     const listing = await fetchRepoDirectory(owner, repo, branch, candidate);
     if (listing.entries && listing.entries.length > 0) {
       // fetch each file's content (only files)
-      const files = listing.entries.filter((e) => e.type === "file");
+      const allFiles = listing.entries.filter((e) => e.type === "file");
+      const totalCount = allFiles.length;
+      const files = limit ? allFiles.slice(0, limit) : allFiles;
+
+      if (metadataOnly) {
+        // Only return metadata (name, path, url) without fetching content
+        const items: ItemFile[] = files.map((f) => ({
+          name: f.name,
+          path: f.path,
+          url: f.download_url ?? `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${encodeURIComponent(f.path)}`,
+        }));
+        return { items, totalCount };
+      }
+
+      // Fetch full content for each file
       const items: ItemFile[] = await Promise.all(
         files.map(async (f) => {
           const downloadUrl = f.download_url ?? `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${encodeURIComponent(f.path)}`;
           try {
-            const res = await fetch(downloadUrl, { cache: "no-store" });
+            const res = await fetch(downloadUrl, { next: { revalidate: 60 } });
             if (!res.ok) return { name: f.name, path: f.path, error: `Failed to fetch file: ${res.status} ${res.statusText}`, url: downloadUrl };
             const text = await res.text();
             return { name: f.name, path: f.path, content: text, url: downloadUrl };
@@ -174,7 +197,7 @@ export async function fetchAllItemsForCollection(owner: string, repo: string, br
         })
       );
 
-      return { items };
+      return { items, totalCount };
     }
     // otherwise keep trying
   }

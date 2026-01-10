@@ -24,7 +24,17 @@ export default async function RepoPage({ params }: { params: Promise<{ owner: st
     collections.map(async (c) => {
       if (!c.config) return { name: c.name, error: "No config file specified for this collection." };
       const res = await fetchFileAtPath(owner, repo, branch, c.config);
-      const items = res.content ? await (await import("../../lib/brevozaConfig")).fetchAllItemsForCollection(owner, repo, branch, c.name, res.content) : { error: "No collection config content" };
+      // Use metadataOnly mode to only load filenames, not content
+      const items = res.content 
+        ? await (await import("../../lib/brevozaConfig")).fetchAllItemsForCollection(
+            owner, 
+            repo, 
+            branch, 
+            c.name, 
+            res.content,
+            { metadataOnly: true } // Only load metadata (name, path, url)
+          ) 
+        : { error: "No collection config content" };
       return { name: c.name, configFile: c.config, ...res, items };
     })
   );
@@ -122,6 +132,9 @@ export default async function RepoPage({ params }: { params: Promise<{ owner: st
                           <ItemsList 
                             items={(col as any).items.items} 
                             collectionName={col.name} 
+                            owner={owner}
+                            repo={repo}
+                            branch={branch}
                           />
                         </div>
                       ) : (
